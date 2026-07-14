@@ -50,9 +50,15 @@ app.use(validateSessionMiddleware);
 
 app.post(
   '/status',
-  handleError(async (_req, res) => {
-    const userToken = secretsService.get(SecretName.akahu_userToken);
-    const appToken = secretsService.get(SecretName.akahu_appToken);
+  handleError(async (req, res) => {
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
+    // Try per-file secrets first, fall back to global for backward compatibility
+    let userToken = secretsService.get(SecretName.akahu_userToken, fileId);
+    let appToken = secretsService.get(SecretName.akahu_appToken, fileId);
+    if (!userToken || !appToken) {
+      userToken = secretsService.get(SecretName.akahu_userToken);
+      appToken = secretsService.get(SecretName.akahu_appToken);
+    }
 
     const configured = userToken != null && appToken != null;
 
@@ -67,9 +73,15 @@ app.post(
 
 app.post(
   '/accounts',
-  handleError(async (_req, res) => {
-    const userToken = secretsService.get(SecretName.akahu_userToken);
-    const appToken = secretsService.get(SecretName.akahu_appToken);
+  handleError(async (req, res) => {
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
+    // Try per-file secrets first, fall back to global for backward compatibility
+    let userToken = secretsService.get(SecretName.akahu_userToken, fileId);
+    let appToken = secretsService.get(SecretName.akahu_appToken, fileId);
+    if (!userToken || !appToken) {
+      userToken = secretsService.get(SecretName.akahu_userToken);
+      appToken = secretsService.get(SecretName.akahu_appToken);
+    }
 
     if (!userToken || !appToken) {
       res.send({
@@ -109,6 +121,7 @@ app.post(
   '/transactions',
   handleError(async (req, res) => {
     const { accountId, startDate } = req.body || {};
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     if (!accountId || !startDate) {
       return res.send({
@@ -119,8 +132,13 @@ app.post(
       });
     }
 
-    const userToken = secretsService.get(SecretName.akahu_userToken);
-    const appToken = secretsService.get(SecretName.akahu_appToken);
+    // Try per-file secrets first, fall back to global for backward compatibility
+    let userToken = secretsService.get(SecretName.akahu_userToken, fileId);
+    let appToken = secretsService.get(SecretName.akahu_appToken, fileId);
+    if (!userToken || !appToken) {
+      userToken = secretsService.get(SecretName.akahu_userToken);
+      appToken = secretsService.get(SecretName.akahu_appToken);
+    }
 
     if (!userToken || !appToken) {
       res.send({

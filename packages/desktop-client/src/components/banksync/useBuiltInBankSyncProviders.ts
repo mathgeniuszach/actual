@@ -17,6 +17,7 @@ import { useAkahuStatus } from '#hooks/useAkahuStatus';
 import { useEnableBankingStatus } from '#hooks/useEnableBankingStatus';
 import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { useGoCardlessStatus } from '#hooks/useGoCardlessStatus';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import { usePluggyAiStatus } from '#hooks/usePluggyAiStatus';
 import { useSimpleFinStatus } from '#hooks/useSimpleFinStatus';
 import { useSyncServerStatus } from '#hooks/useSyncServerStatus';
@@ -97,6 +98,7 @@ export function useBuiltInBankSyncProviders({
   const multiuserEnabled = useMultiuserEnabled();
   const canConfigureProviders =
     !multiuserEnabled || hasPermission(Permissions.ADMINISTRATOR);
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   const [isGoCardlessSetupComplete, setIsGoCardlessSetupComplete] = useState<
     boolean | null
@@ -373,7 +375,7 @@ export function useBuiltInBankSyncProviders({
     setLoadingSimpleFinAccounts(true);
 
     try {
-      const results = await send('simplefin-accounts');
+      const results = await send('simplefin-accounts', { fileId: cloudFileId });
       if (results.error_code) {
         throw new Error(results.reason);
       }
@@ -415,6 +417,7 @@ export function useBuiltInBankSyncProviders({
     loadingSimpleFinAccounts,
     onSimpleFinInit,
     upgradingAccountId,
+    cloudFileId,
   ]);
 
   const onConnectEnableBanking = useCallback(async () => {
@@ -453,7 +456,7 @@ export function useBuiltInBankSyncProviders({
     }
 
     try {
-      const results = await send('pluggyai-accounts');
+      const results = await send('pluggyai-accounts', { fileId: cloudFileId });
       if (results.error_code) {
         throw new Error(results.reason);
       }
@@ -509,6 +512,7 @@ export function useBuiltInBankSyncProviders({
     onPluggyAiInit,
     t,
     upgradingAccountId,
+    cloudFileId,
   ]);
 
   const onConnectAkahu = useCallback(async () => {
@@ -524,7 +528,7 @@ export function useBuiltInBankSyncProviders({
     setLoadingAkahuAccounts(true);
 
     try {
-      const results = await send('akahu-accounts');
+      const results = await send('akahu-accounts', { fileId: cloudFileId });
       if (results.error_code) {
         throw new Error(results.reason);
       }
@@ -590,6 +594,7 @@ export function useBuiltInBankSyncProviders({
     onAkahuInit,
     upgradingAccountId,
     t,
+    cloudFileId,
   ]);
 
   const configuredProviders = {

@@ -61,10 +61,11 @@ app.use(express.json());
 app.use(validateSessionMiddleware);
 
 app.post('/status', async (req, res) => {
+  const fileId = req.headers['x-actual-file-id'] as string | undefined;
   res.send({
     status: 'ok',
     data: {
-      configured: goCardlessService.isConfigured(),
+      configured: goCardlessService.isConfigured(fileId),
     },
   });
 });
@@ -75,10 +76,12 @@ app.post(
     const { institutionId: rawInstitutionId } = req.body || {};
     const institutionId = sanitizeId<GoCardlessInstitutionId>(rawInstitutionId);
     const host = validateOrigin(req.headers.origin);
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     const { link, requisitionId } = await goCardlessService.createRequisition({
       institutionId,
       host,
+      fileId,
     });
 
     res.send({
@@ -97,10 +100,11 @@ app.post(
     const requisitionId = sanitizeId<GoCardlessRequisitionId>(
       (req.body || {}).requisitionId,
     );
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     try {
       const { requisition, accounts } =
-        await goCardlessService.getRequisitionWithAccounts(requisitionId);
+        await goCardlessService.getRequisitionWithAccounts(requisitionId, fileId);
 
       res.send({
         status: 'ok',
@@ -135,9 +139,10 @@ app.post(
   handleError(async (req, res) => {
     const { country: rawCountry, showDemo = false } = req.body || {};
     const country = sanitizeId(rawCountry);
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
-    await goCardlessService.setToken();
-    const data = await goCardlessService.getInstitutions(country);
+    await goCardlessService.setToken(fileId);
+    const data = await goCardlessService.getInstitutions(country, fileId);
 
     res.send({
       status: 'ok',
@@ -160,8 +165,9 @@ app.post(
     const requisitionId = sanitizeId<GoCardlessRequisitionId>(
       (req.body || {}).requisitionId,
     );
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
-    const data = await goCardlessService.deleteRequisition(requisitionId);
+    const data = await goCardlessService.deleteRequisition(requisitionId, fileId);
     if (data.summary === 'Requisition deleted') {
       res.send({
         status: 'ok',
@@ -191,6 +197,7 @@ app.post(
     } = req.body || {};
     const requisitionId = sanitizeId<GoCardlessRequisitionId>(rawRequisitionId);
     const accountId = sanitizeId<GoCardlessAccountId>(rawAccountId);
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     try {
       if (includeBalance) {
@@ -204,6 +211,7 @@ app.post(
           accountId,
           startDate,
           endDate,
+          fileId,
         );
 
         res.send({
@@ -228,6 +236,7 @@ app.post(
           accountId,
           startDate,
           endDate,
+          fileId,
         );
 
         res.send({

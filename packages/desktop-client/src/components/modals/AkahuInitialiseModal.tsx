@@ -16,6 +16,7 @@ import {
   ModalHeader,
 } from '#components/common/Modal';
 import { FormField, FormLabel } from '#components/forms';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 import { getSecretsError } from '#util/error';
 
@@ -28,6 +29,7 @@ export const AkahuInitialiseModal = ({
   onSuccess,
 }: AkahuInitialiseModalProps) => {
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
   const [userToken, setUserToken] = useState('');
   const [appToken, setAppToken] = useState('');
   const [isValid, setIsValid] = useState(true);
@@ -49,6 +51,7 @@ export const AkahuInitialiseModal = ({
       (await send('secret-set', {
         name: 'akahu_userToken',
         value: userToken,
+        fileId: cloudFileId,
       })) || {};
 
     if (error) {
@@ -60,6 +63,7 @@ export const AkahuInitialiseModal = ({
         (await send('secret-set', {
           name: 'akahu_appToken',
           value: appToken,
+          fileId: cloudFileId,
         })) || {};
 
       if (error) {

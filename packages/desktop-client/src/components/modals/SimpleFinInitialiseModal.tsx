@@ -17,6 +17,7 @@ import {
   ModalHeader,
 } from '#components/common/Modal';
 import { FormField, FormLabel } from '#components/forms';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 import { getSecretsError } from '#util/error';
 
@@ -29,6 +30,7 @@ export const SimpleFinInitialiseModal = ({
   onSuccess,
 }: SimpleFinInitialiseModalProps) => {
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
   const [token, setToken] = useState('');
   const [isValid, setIsValid] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +48,7 @@ export const SimpleFinInitialiseModal = ({
       (await send('secret-set', {
         name: 'simplefin_token',
         value: token,
+        fileId: cloudFileId,
       })) || {};
 
     if (error) {
@@ -55,6 +58,7 @@ export const SimpleFinInitialiseModal = ({
       await send('secret-set', {
         name: 'simplefin_accessKey',
         value: null,
+        fileId: cloudFileId,
       });
       onSuccess();
     }

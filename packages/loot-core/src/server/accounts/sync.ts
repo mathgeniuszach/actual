@@ -189,6 +189,7 @@ async function downloadGoCardlessTransactions(
 async function downloadSimpleFinTransactions(
   acctId: AccountEntity['id'] | AccountEntity['id'][],
   since: string | string[],
+  fileId?: string,
 ) {
   const userToken = await asyncStorage.getItem('user-token');
   if (!userToken) return;
@@ -196,6 +197,14 @@ async function downloadSimpleFinTransactions(
   const batchSync = Array.isArray(acctId);
 
   logger.log('Pulling transactions from SimpleFin');
+
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
 
   let res;
   try {
@@ -205,9 +214,7 @@ async function downloadSimpleFinTransactions(
         accountId: acctId,
         startDate: since,
       },
-      {
-        'X-ACTUAL-TOKEN': userToken,
-      },
+      headers,
       // 5 minute timeout for batch sync, one minute for individual accounts
       Array.isArray(acctId) ? 300000 : 60000,
     );
@@ -1215,6 +1222,7 @@ export async function syncAccount(
 
 export async function simpleFinBatchSync(
   accounts: Array<Pick<AccountEntity, 'id' | 'account_id'>>,
+  fileId?: string,
 ) {
   const startDates = await Promise.all(
     accounts.map(async a => getAccountSyncStartDate(a.id)),
@@ -1223,6 +1231,7 @@ export async function simpleFinBatchSync(
   const res = await downloadSimpleFinTransactions(
     accounts.map(a => a.account_id),
     startDates,
+    fileId,
   );
 
   if (!res) {

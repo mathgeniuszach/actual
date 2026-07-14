@@ -17,7 +17,12 @@ app.use(validateSessionMiddleware);
 app.post(
   '/status',
   handleError(async (req, res) => {
-    const token = secretsService.get(SecretName.simplefin_token);
+    const fileId = req.headers['x-actual-file-id'];
+    // Try per-file secret first, fall back to global for backward compatibility
+    let token = secretsService.get(SecretName.simplefin_token, fileId);
+    if (!token) {
+      token = secretsService.get(SecretName.simplefin_token);
+    }
     const configured = token != null && !isForbidden(token);
 
     res.send({
@@ -32,11 +37,19 @@ app.post(
 app.post(
   '/accounts',
   handleError(async (req, res) => {
-    let accessKey = secretsService.get(SecretName.simplefin_accessKey);
+    const fileId = req.headers['x-actual-file-id'];
+    // Try per-file secret first, fall back to global for backward compatibility
+    let accessKey = secretsService.get(SecretName.simplefin_accessKey, fileId);
+    if (!accessKey) {
+      accessKey = secretsService.get(SecretName.simplefin_accessKey);
+    }
 
     try {
       if (isInvalidAccessKey(accessKey)) {
-        const token = secretsService.get(SecretName.simplefin_token);
+        let token = secretsService.get(SecretName.simplefin_token, fileId);
+        if (!token) {
+          token = secretsService.get(SecretName.simplefin_token);
+        }
         if (token == null || isForbidden(token)) {
           throw new Error('No token');
         } else {
@@ -44,7 +57,7 @@ app.post(
           if (isInvalidAccessKey(accessKey)) {
             throw new Error('No access key');
           }
-          secretsService.set(SecretName.simplefin_accessKey, accessKey);
+          secretsService.set(SecretName.simplefin_accessKey, accessKey, fileId);
         }
       }
     } catch {
@@ -72,8 +85,12 @@ app.post(
   '/transactions',
   handleError(async (req, res) => {
     const { accountId, startDate } = req.body || {};
-
-    const accessKey = secretsService.get(SecretName.simplefin_accessKey);
+    const fileId = req.headers['x-actual-file-id'];
+    // Try per-file secret first, fall back to global for backward compatibility
+    let accessKey = secretsService.get(SecretName.simplefin_accessKey, fileId);
+    if (!accessKey) {
+      accessKey = secretsService.get(SecretName.simplefin_accessKey);
+    }
 
     if (isInvalidAccessKey(accessKey)) {
       invalidToken(res);

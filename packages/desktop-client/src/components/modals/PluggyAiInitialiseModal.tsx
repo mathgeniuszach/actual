@@ -18,6 +18,7 @@ import {
   ModalHeader,
 } from '#components/common/Modal';
 import { FormField, FormLabel } from '#components/forms';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 import { getSecretsError } from '#util/error';
 
@@ -30,6 +31,7 @@ export const PluggyAiInitialiseModal = ({
   onSuccess,
 }: PluggyAiInitialiseProps) => {
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [itemIds, setItemIds] = useState('');
@@ -58,6 +60,7 @@ export const PluggyAiInitialiseModal = ({
       (await send('secret-set', {
         name: 'pluggyai_clientId',
         value: clientId,
+        fileId: cloudFileId,
       })) || {};
 
     if (error) {
@@ -70,6 +73,7 @@ export const PluggyAiInitialiseModal = ({
         (await send('secret-set', {
           name: 'pluggyai_clientSecret',
           value: clientSecret,
+          fileId: cloudFileId,
         })) || {});
       if (error) {
         setIsLoading(false);
@@ -81,6 +85,7 @@ export const PluggyAiInitialiseModal = ({
           (await send('secret-set', {
             name: 'pluggyai_itemIds',
             value: itemIds,
+            fileId: cloudFileId,
           })) || {});
 
         if (error) {

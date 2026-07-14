@@ -88,6 +88,11 @@ export type CreateRequisitionParams = {
    * Host of your frontend app - on this host you will be redirected after linking with bank
    */
   host: string;
+
+  /**
+   * Optional file ID for per-file bank sync credentials
+   */
+  fileId?: string;
 };
 
 export type GetBalances = {
