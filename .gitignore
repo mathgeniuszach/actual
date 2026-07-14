@@ -108,3 +108,7 @@ storybook-static
 .actualrc.yaml
 .actualrc.yml
 actual.config.js
+
+# Nix flake build output
+result
+result-*
