@@ -21,6 +21,7 @@ import {
   ModalHeader,
 } from '#components/common/Modal';
 import { FormField, FormLabel } from '#components/forms';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 
 type EnableBankingInitialiseProps = Extract<
@@ -32,6 +33,7 @@ export function EnableBankingInitialiseModal({
   onSuccess,
 }: EnableBankingInitialiseProps) {
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
   const [applicationId, setApplicationId] = useState('');
   const [secretKey, setSecretKey] = useState('');
   const [isValid, setIsValid] = useState(true);
@@ -75,6 +77,7 @@ export function EnableBankingInitialiseModal({
       const result = await send('enablebanking-configure', {
         applicationId,
         secretKey,
+        fileId: cloudFileId,
       });
 
       if (result?.error) {

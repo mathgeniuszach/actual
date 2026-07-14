@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { sync } from '#app/appSlice';
 import { useAccounts } from '#hooks/useAccounts';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import { addNotification } from '#notifications/notificationsSlice';
 import { payeeQueries } from '#payees';
 import { useDispatch, useStore } from '#redux';
@@ -552,6 +553,7 @@ export function useSyncAccountsMutation() {
   const { t } = useTranslation();
 
   const { data: accounts = [] } = useAccounts();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
   const store = useStore();
 
   return useMutation({
@@ -615,6 +617,7 @@ export function useSyncAccountsMutation() {
 
         const res = await send('simplefin-batch-sync', {
           ids: simpleFinAccounts.map(a => a.id),
+          fileId: cloudFileId,
         });
 
         for (const account of res) {

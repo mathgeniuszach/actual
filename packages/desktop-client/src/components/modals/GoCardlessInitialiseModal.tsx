@@ -19,6 +19,7 @@ import {
   ModalHeader,
 } from '#components/common/Modal';
 import { FormField, FormLabel } from '#components/forms';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 
 type GoCardlessInitialiseModalProps = Extract<
@@ -30,6 +31,7 @@ export const GoCardlessInitialiseModal = ({
   onSuccess,
 }: GoCardlessInitialiseModalProps) => {
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
   const [secretId, setSecretId] = useState('');
   const [secretKey, setSecretKey] = useState('');
   const [isValid, setIsValid] = useState(true);
@@ -53,6 +55,7 @@ export const GoCardlessInitialiseModal = ({
       (await send('secret-set', {
         name: 'gocardless_secretId',
         value: secretId,
+        fileId: cloudFileId,
       })) || {};
 
     if (error) {
@@ -65,6 +68,7 @@ export const GoCardlessInitialiseModal = ({
         (await send('secret-set', {
           name: 'gocardless_secretKey',
           value: secretKey,
+          fileId: cloudFileId,
         })) || {});
       if (error) {
         setIsLoading(false);

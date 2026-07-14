@@ -187,7 +187,8 @@ function cleanupPendingAuth(state: string, waiterId?: string) {
 app.post(
   '/status',
   handleError(async (req: Request, res: Response) => {
-    const configured = enableBankingService.isConfigured();
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
+    const configured = enableBankingService.isConfigured(fileId);
 
     res.send({
       status: 'ok',
@@ -202,6 +203,7 @@ app.post(
   '/configure',
   handleError(async (req: Request, res: Response) => {
     const { applicationId, secretKey } = req.body || {};
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     if (!applicationId || !secretKey) {
       res.send({
@@ -235,8 +237,8 @@ app.post(
     }
 
     // Only persist after successful validation
-    secretsService.set(SecretName.enablebanking_applicationId, applicationId);
-    secretsService.set(SecretName.enablebanking_secretKey, secretKey);
+    secretsService.set(SecretName.enablebanking_applicationId, applicationId, fileId);
+    secretsService.set(SecretName.enablebanking_secretKey, secretKey, fileId);
 
     res.send({
       status: 'ok',

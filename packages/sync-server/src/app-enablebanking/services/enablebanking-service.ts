@@ -93,11 +93,18 @@ export type PsuHeaders = {
 
 // --- Helper functions ---
 
-function getCredentials(): { applicationId: string; secretKey: string } {
-  const applicationId = secretsService.get(
+function getCredentials(fileId?: string): { applicationId: string; secretKey: string } {
+  // Try per-file secrets first, fall back to global for backward compatibility
+  let applicationId = secretsService.get(
     SecretName.enablebanking_applicationId,
+    fileId,
   );
-  const secretKey = secretsService.get(SecretName.enablebanking_secretKey);
+  let secretKey = secretsService.get(SecretName.enablebanking_secretKey, fileId);
+
+  if (!applicationId || !secretKey) {
+    applicationId = secretsService.get(SecretName.enablebanking_applicationId);
+    secretKey = secretsService.get(SecretName.enablebanking_secretKey);
+  }
 
   if (!applicationId || !secretKey) {
     throw new EnableBankingError(
@@ -110,8 +117,8 @@ function getCredentials(): { applicationId: string; secretKey: string } {
   return { applicationId, secretKey };
 }
 
-function getAuthorizationHeader(): string {
-  const { applicationId, secretKey } = getCredentials();
+function getAuthorizationHeader(fileId?: string): string {
+  const { applicationId, secretKey } = getCredentials(fileId);
   const token = getJWT(applicationId, secretKey);
   return `Bearer ${token}`;
 }
@@ -292,11 +299,19 @@ export function normalizeAccount(
 // --- Service ---
 
 export const enableBankingService = {
-  isConfigured(): boolean {
-    const applicationId = secretsService.get(
+  isConfigured(fileId?: string): boolean {
+    // Try per-file secrets first, fall back to global for backward compatibility
+    let applicationId = secretsService.get(
       SecretName.enablebanking_applicationId,
+      fileId,
     );
-    const secretKey = secretsService.get(SecretName.enablebanking_secretKey);
+    let secretKey = secretsService.get(SecretName.enablebanking_secretKey, fileId);
+    if (!applicationId || !secretKey) {
+      applicationId = secretsService.get(
+        SecretName.enablebanking_applicationId,
+      );
+      secretKey = secretsService.get(SecretName.enablebanking_secretKey);
+    }
     return !!(applicationId && secretKey);
   },
 
