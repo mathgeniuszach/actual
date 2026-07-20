@@ -84,13 +84,13 @@
           # This needs to be done before fetchYarnBerryDeps to ensure lockfile consistency
           patchedSrc = stdenv.mkDerivation {
             pname = "actual-source-patched";
-            version = "26.7.1-modded.2";
+            version = "26.7.1-modded.3";
             inherit src;
             nativeBuildInputs = [ jq ];
             phases = [ "unpackPhase" "patchPhase" "installPhase" ];
             patchPhase = ''
               # Update version to show this is a modded build
-              cat <<< $(jq '.version = "26.7.1-modded.2"' ./packages/sync-server/package.json) > ./packages/sync-server/package.json
+              cat <<< $(jq '.version = "26.7.1-modded.3"' ./packages/sync-server/package.json) > ./packages/sync-server/package.json
 
               # Apply yarn 4.14 compatibility changes (from upstream nixpkgs)
               # Replace yarnPath with approvedGitRepositories and enableScripts
@@ -138,7 +138,7 @@
         in
         stdenv.mkDerivation (finalAttrs: {
           pname = "actual-server";
-          version = "26.7.1-modded.2";
+          version = "26.7.1-modded.3";
 
           src = patchedSrc;
           inherit missingHashes;

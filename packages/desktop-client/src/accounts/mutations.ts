@@ -347,10 +347,11 @@ export function useUnlinkAccountMutation() {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   return useMutation({
     mutationFn: async ({ id }: UnlinkAccountPayload) => {
-      await send('account-unlink', { id });
+      await send('account-unlink', { id, fileId: cloudFileId });
     },
     onSuccess: (_, { id }) => {
       invalidateQueries(queryClient);
@@ -384,6 +385,7 @@ export function useLinkAccountMutation() {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   return useMutation({
     mutationFn: async ({
@@ -401,6 +403,7 @@ export function useLinkAccountMutation() {
         offBudget,
         startingDate,
         startingBalance,
+        fileId: cloudFileId,
       });
     },
     onSuccess: () => {
@@ -426,6 +429,7 @@ export function useLinkAccountSimpleFinMutation() {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   return useMutation({
     mutationFn: async ({
@@ -441,6 +445,7 @@ export function useLinkAccountSimpleFinMutation() {
         offBudget,
         startingDate,
         startingBalance,
+        fileId: cloudFileId,
       });
     },
     onSuccess: () => {
@@ -468,6 +473,7 @@ export function useLinkAccountPluggyAiMutation() {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   return useMutation({
     mutationFn: async ({
@@ -483,6 +489,7 @@ export function useLinkAccountPluggyAiMutation() {
         offBudget,
         startingDate,
         startingBalance,
+        fileId: cloudFileId,
       });
     },
     onSuccess: () => {
@@ -510,6 +517,7 @@ export function useLinkAccountAkahuMutation() {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   return useMutation({
     mutationFn: async ({
@@ -525,6 +533,7 @@ export function useLinkAccountAkahuMutation() {
         offBudget,
         startingDate,
         startingBalance,
+        fileId: cloudFileId,
       });
     },
     onSuccess: () => {
@@ -550,6 +559,7 @@ export function useLinkAccountEnableBankingMutation() {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   return useMutation({
     mutationFn: async ({
@@ -565,6 +575,7 @@ export function useLinkAccountEnableBankingMutation() {
         offBudget,
         startingDate,
         startingBalance,
+        fileId: cloudFileId,
       });
     },
     onSuccess: () => {
@@ -688,6 +699,7 @@ export function useSyncAccountsMutation() {
         // Perform sync operation
         const res = await send('accounts-bank-sync', {
           ids: [accountId],
+          fileId: cloudFileId,
         });
 
         const success = handleSyncResponse(

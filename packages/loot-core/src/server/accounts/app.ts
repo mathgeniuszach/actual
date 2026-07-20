@@ -15,6 +15,7 @@ import {
 import { app as mainApp } from '#server/main-app';
 import { mutator } from '#server/mutators';
 import { del, get, post } from '#server/post';
+import * as prefs from '#server/prefs';
 import { getServer } from '#server/server-config';
 import { batchMessages } from '#server/sync';
 import { undoable, withUndo } from '#server/undo';
@@ -47,6 +48,7 @@ type LinkAccountBaseParams = {
   offBudget?: boolean;
   startingDate?: string;
   startingBalance?: number;
+  fileId?: string;
 };
 
 export type AccountHandlers = {
@@ -168,6 +170,7 @@ async function linkGoCardlessAccount({
   offBudget = false,
   startingDate,
   startingBalance,
+  fileId,
 }: LinkAccountBaseParams & {
   requisitionId: string;
   account: SyncServerGoCardlessAccount;
@@ -218,6 +221,7 @@ async function linkGoCardlessAccount({
     bank.bank_id,
     startingDate,
     startingBalance,
+    fileId,
   );
 
   await handleSyncResponse(syncRes, id);
@@ -236,6 +240,7 @@ async function linkSimpleFinAccount({
   offBudget = false,
   startingDate,
   startingBalance,
+  fileId,
 }: LinkAccountBaseParams & {
   externalAccount: SyncServerSimpleFinAccount;
 }) {
@@ -295,6 +300,7 @@ async function linkSimpleFinAccount({
     bank.bank_id,
     startingDate,
     startingBalance,
+    fileId,
   );
 
   await handleSyncResponse(syncRes, id);
@@ -313,6 +319,7 @@ async function linkPluggyAiAccount({
   offBudget = false,
   startingDate,
   startingBalance,
+  fileId,
 }: LinkAccountBaseParams & {
   externalAccount: SyncServerPluggyAiAccount;
 }) {
@@ -372,6 +379,7 @@ async function linkPluggyAiAccount({
     bank.bank_id,
     startingDate,
     startingBalance,
+    fileId,
   );
 
   await handleSyncResponse(syncRes, id);
@@ -390,6 +398,7 @@ async function linkAkahuAccount({
   offBudget = false,
   startingDate,
   startingBalance,
+  fileId,
 }: LinkAccountBaseParams & {
   externalAccount: SyncServerAkahuAccount;
 }) {
@@ -446,6 +455,7 @@ async function linkAkahuAccount({
     bank.bank_id,
     startingDate,
     startingBalance,
+    fileId,
   );
 
   await handleSyncResponse(syncRes, id);
@@ -464,6 +474,7 @@ async function linkEnableBankingAccount({
   offBudget = false,
   startingDate,
   startingBalance,
+  fileId,
 }: LinkAccountBaseParams & {
   externalAccount: SyncServerEnableBankingAccount;
 }) {
@@ -531,6 +542,7 @@ async function linkEnableBankingAccount({
     bank.bank_id,
     startingDate,
     startingBalance,
+    fileId,
   );
 
   await handleSyncResponse(syncRes, id);
@@ -783,14 +795,24 @@ let stopPolling = false;
 
 async function pollGoCardlessWebToken({
   requisitionId,
+  fileId,
 }: {
   requisitionId: string;
+  fileId?: string;
 }) {
   const userToken = await asyncStorage.getItem('user-token');
   if (!userToken) return { error: 'unknown' };
 
   const startTime = Date.now();
   stopPolling = false;
+
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
 
   async function getData(
     cb: (
@@ -819,9 +841,7 @@ async function pollGoCardlessWebToken({
       {
         requisitionId,
       },
-      {
-        'X-ACTUAL-TOKEN': userToken,
-      },
+      headers,
     );
 
     if (data) {
@@ -881,11 +901,7 @@ async function goCardlessStatus({ fileId }: { fileId?: string }) {
     headers['X-Actual-File-Id'] = fileId;
   }
 
-  return post(
-    serverConfig.GOCARDLESS_SERVER + '/status',
-    {},
-    headers,
-  );
+  return post(serverConfig.GOCARDLESS_SERVER + '/status', {}, headers);
 }
 
 async function simpleFinStatus({ fileId }: { fileId?: string }) {
@@ -908,11 +924,7 @@ async function simpleFinStatus({ fileId }: { fileId?: string }) {
     headers['X-Actual-File-Id'] = fileId;
   }
 
-  return post(
-    serverConfig.SIMPLEFIN_SERVER + '/status',
-    {},
-    headers,
-  );
+  return post(serverConfig.SIMPLEFIN_SERVER + '/status', {}, headers);
 }
 
 async function pluggyAiStatus({ fileId }: { fileId?: string }) {
@@ -935,11 +947,7 @@ async function pluggyAiStatus({ fileId }: { fileId?: string }) {
     headers['X-Actual-File-Id'] = fileId;
   }
 
-  return post(
-    serverConfig.PLUGGYAI_SERVER + '/status',
-    {},
-    headers,
-  );
+  return post(serverConfig.PLUGGYAI_SERVER + '/status', {}, headers);
 }
 
 async function akahuStatus({ fileId }: { fileId?: string }) {
@@ -962,11 +970,7 @@ async function akahuStatus({ fileId }: { fileId?: string }) {
     headers['X-Actual-File-Id'] = fileId;
   }
 
-  return post(
-    serverConfig.AKAHU_SERVER + '/status',
-    {},
-    headers,
-  );
+  return post(serverConfig.AKAHU_SERVER + '/status', {}, headers);
 }
 
 async function enableBankingStatus({ fileId }: { fileId?: string }) {
@@ -989,11 +993,7 @@ async function enableBankingStatus({ fileId }: { fileId?: string }) {
     headers['X-Actual-File-Id'] = fileId;
   }
 
-  return post(
-    serverConfig.ENABLEBANKING_SERVER + '/status',
-    {},
-    headers,
-  );
+  return post(serverConfig.ENABLEBANKING_SERVER + '/status', {}, headers);
 }
 
 async function simpleFinAccounts({ fileId }: { fileId?: string }) {
@@ -1270,33 +1270,12 @@ async function enableBankingConfigure({
   );
 }
 
-async function getGoCardlessBanks(country: string) {
-  const userToken = await asyncStorage.getItem('user-token');
-
-  if (!userToken) {
-    return { error: 'unauthorized' };
-  }
-
-  const serverConfig = getServer();
-  if (!serverConfig) {
-    throw new Error('Failed to get server config.');
-  }
-
-  return post(
-    serverConfig.GOCARDLESS_SERVER + '/get-banks',
-    { country, showDemo: isNonProductionEnvironment() },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
-  );
-}
-
-async function createGoCardlessWebToken({
-  institutionId,
-  accessValidForDays,
+async function getGoCardlessBanks({
+  country,
+  fileId,
 }: {
-  institutionId: string;
-  accessValidForDays: number;
+  country: string;
+  fileId?: string;
 }) {
   const userToken = await asyncStorage.getItem('user-token');
 
@@ -1309,6 +1288,49 @@ async function createGoCardlessWebToken({
     throw new Error('Failed to get server config.');
   }
 
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
+
+  return post(
+    serverConfig.GOCARDLESS_SERVER + '/get-banks',
+    { country, showDemo: isNonProductionEnvironment() },
+    headers,
+  );
+}
+
+async function createGoCardlessWebToken({
+  institutionId,
+  accessValidForDays,
+  fileId,
+}: {
+  institutionId: string;
+  accessValidForDays: number;
+  fileId?: string;
+}) {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (!userToken) {
+    return { error: 'unauthorized' };
+  }
+
+  const serverConfig = getServer();
+  if (!serverConfig) {
+    throw new Error('Failed to get server config.');
+  }
+
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
+
   try {
     return await post(
       serverConfig.GOCARDLESS_SERVER + '/create-web-token',
@@ -1316,9 +1338,7 @@ async function createGoCardlessWebToken({
         institutionId,
         accessValidForDays,
       },
-      {
-        'X-ACTUAL-TOKEN': userToken,
-      },
+      headers,
     );
   } catch (error) {
     logger.error(error);
@@ -1485,8 +1505,10 @@ export type SyncResponseWithErrors = SyncResponse & {
 
 async function accountsBankSync({
   ids = [],
+  fileId,
 }: {
   ids: Array<AccountEntity['id']>;
+  fileId?: string;
 }): Promise<SyncResponseWithErrors> {
   const { 'user-id': userId, 'user-key': userKey } =
     await asyncStorage.multiGet(['user-id', 'user-key']);
@@ -1519,6 +1541,9 @@ async function accountsBankSync({
           acct.id,
           acct.account_id,
           acct.bankId,
+          undefined,
+          undefined,
+          fileId,
         );
 
         const syncResponseData = await handleSyncResponse(
@@ -1729,7 +1754,18 @@ async function importTransactions({
   }
 }
 
-async function unlinkAccount({ id }: { id: AccountEntity['id'] }) {
+async function unlinkAccount({
+  id,
+  fileId,
+}: {
+  id: AccountEntity['id'];
+  fileId?: string;
+}) {
+  // Bank-sync credentials are per budget file. Fall back to the currently
+  // open budget's cloud file id so internal callers (e.g. closeAccount) that
+  // don't pass one still target the right file's GoCardless credentials.
+  const resolvedFileId = fileId ?? prefs.getPrefs()?.cloudFileId;
+
   const accRow = await db.first<db.DbAccount>(
     'SELECT * FROM accounts WHERE id = ?',
     [id],
@@ -1791,15 +1827,21 @@ async function unlinkAccount({ id }: { id: AccountEntity['id'] }) {
 
     const requisitionId = bank.bank_id;
 
+    const headers: Record<string, string> = {
+      'X-ACTUAL-TOKEN': userToken,
+    };
+
+    if (resolvedFileId) {
+      headers['X-Actual-File-Id'] = resolvedFileId;
+    }
+
     try {
       await post(
         serverConfig.GOCARDLESS_SERVER + '/remove-account',
         {
           requisitionId,
         },
-        {
-          'X-ACTUAL-TOKEN': userToken,
-        },
+        headers,
       );
     } catch (error) {
       logger.log({ error });

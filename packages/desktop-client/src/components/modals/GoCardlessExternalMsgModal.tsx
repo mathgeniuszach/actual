@@ -22,11 +22,12 @@ import { COUNTRY_OPTIONS } from '#components/util/countries';
 import { getCountryFromBrowser } from '#components/util/localeToCountry';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 import { useGoCardlessStatus } from '#hooks/useGoCardlessStatus';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import { pushModal } from '#modals/modalsSlice';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 import { useDispatch } from '#redux';
 
-function useAvailableBanks(country: string) {
+function useAvailableBanks(country: string, fileId?: string) {
   const [banks, setBanks] = useState<GoCardlessInstitution[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -43,7 +44,10 @@ function useAvailableBanks(country: string) {
 
       setIsLoading(true);
 
-      const { data, error } = await sendCatch('gocardless-get-banks', country);
+      const { data, error } = await sendCatch('gocardless-get-banks', {
+        country,
+        fileId,
+      });
 
       if (error || !Array.isArray(data)) {
         setIsError(true);
@@ -56,7 +60,7 @@ function useAvailableBanks(country: string) {
     }
 
     void fetch();
-  }, [setBanks, setIsLoading, country]);
+  }, [setBanks, setIsLoading, country, fileId]);
 
   return {
     data: banks,
@@ -95,6 +99,7 @@ export function GoCardlessExternalMsgModal({
 
   const dispatch = useDispatch();
   const [language] = useGlobalPref('language');
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   const browserTimezone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || '';
@@ -122,7 +127,7 @@ export function GoCardlessExternalMsgModal({
     data: bankOptions,
     isLoading: isBankOptionsLoading,
     isError: isBankOptionError,
-  } = useAvailableBanks(country);
+  } = useAvailableBanks(country, cloudFileId);
   const {
     configuredGoCardless: isConfigured,
     isLoading: isConfigurationLoading,

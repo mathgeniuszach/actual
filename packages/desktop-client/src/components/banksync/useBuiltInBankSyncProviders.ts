@@ -96,9 +96,14 @@ export function useBuiltInBankSyncProviders({
   const syncServerStatus = useSyncServerStatus();
   const { hasPermission } = useAuth();
   const multiuserEnabled = useMultiuserEnabled();
-  const canConfigureProviders =
-    !multiuserEnabled || hasPermission(Permissions.ADMINISTRATOR);
   const [cloudFileId] = useMetadataPref('cloudFileId');
+  // Bank-sync credentials are stored per budget file, so any user with access
+  // to a cloud file may configure its providers. Global (server-wide) config
+  // still requires admin, which the sync-server continues to enforce.
+  const canConfigureProviders =
+    !multiuserEnabled ||
+    hasPermission(Permissions.ADMINISTRATOR) ||
+    !!cloudFileId;
 
   const [isGoCardlessSetupComplete, setIsGoCardlessSetupComplete] = useState<
     boolean | null
@@ -236,6 +241,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'gocardless_secretId',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear GoCardless secret ID',
       );
@@ -243,6 +249,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'gocardless_secretKey',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear GoCardless secret key',
       );
@@ -250,7 +257,7 @@ export function useBuiltInBankSyncProviders({
     } catch (error) {
       notifyResetFailure('GoCardless', error);
     }
-  }, [notifyResetFailure]);
+  }, [notifyResetFailure, cloudFileId]);
 
   const onSimpleFinReset = useCallback(async () => {
     try {
@@ -258,6 +265,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'simplefin_token',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear SimpleFIN token',
       );
@@ -265,6 +273,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'simplefin_accessKey',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear SimpleFIN access key',
       );
@@ -272,7 +281,7 @@ export function useBuiltInBankSyncProviders({
     } catch (error) {
       notifyResetFailure('SimpleFIN', error);
     }
-  }, [notifyResetFailure]);
+  }, [notifyResetFailure, cloudFileId]);
 
   const onPluggyAiReset = useCallback(async () => {
     try {
@@ -280,6 +289,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'pluggyai_clientId',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear Pluggy.ai client ID',
       );
@@ -287,6 +297,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'pluggyai_clientSecret',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear Pluggy.ai client secret',
       );
@@ -294,6 +305,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'pluggyai_itemIds',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear Pluggy.ai item IDs',
       );
@@ -301,7 +313,7 @@ export function useBuiltInBankSyncProviders({
     } catch (error) {
       notifyResetFailure('Pluggy.ai', error);
     }
-  }, [notifyResetFailure]);
+  }, [notifyResetFailure, cloudFileId]);
 
   const onEnableBankingReset = useCallback(async () => {
     try {
@@ -309,6 +321,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'enablebanking_applicationId',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear Enable Banking application ID',
       );
@@ -316,6 +329,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'enablebanking_secretKey',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear Enable Banking secret key',
       );
@@ -323,7 +337,7 @@ export function useBuiltInBankSyncProviders({
     } catch (error) {
       notifyResetFailure('Enable Banking', error);
     }
-  }, [notifyResetFailure]);
+  }, [notifyResetFailure, cloudFileId]);
 
   const onAkahuReset = useCallback(async () => {
     try {
@@ -331,6 +345,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'akahu_userToken',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear Akahu user token',
       );
@@ -338,6 +353,7 @@ export function useBuiltInBankSyncProviders({
         await send('secret-set', {
           name: 'akahu_appToken',
           value: null,
+          fileId: cloudFileId,
         }),
         'Failed to clear Akahu app token',
       );
@@ -346,7 +362,7 @@ export function useBuiltInBankSyncProviders({
       console.log(error);
       notifyResetFailure('Akahu', error);
     }
-  }, [notifyResetFailure]);
+  }, [notifyResetFailure, cloudFileId]);
 
   const onConnectGoCardless = useCallback(() => {
     if (!isGoCardlessSetupComplete) {
@@ -354,12 +370,13 @@ export function useBuiltInBankSyncProviders({
       return;
     }
 
-    void authorizeBank(dispatch, upgradingAccountId);
+    void authorizeBank(dispatch, upgradingAccountId, cloudFileId);
   }, [
     dispatch,
     isGoCardlessSetupComplete,
     onGoCardlessInit,
     upgradingAccountId,
+    cloudFileId,
   ]);
 
   const onConnectSimpleFin = useCallback(async () => {

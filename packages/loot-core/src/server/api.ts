@@ -263,10 +263,12 @@ handlers['api/sync'] = async function () {
 handlers['api/bank-sync'] = async function (args) {
   const batchSync = args?.accountId == null;
   const allErrors = [];
+  const { cloudFileId } = prefs.getPrefs() || {};
 
   if (!batchSync) {
     const { errors } = await handlers['accounts-bank-sync']({
       ids: [args.accountId],
+      fileId: cloudFileId,
     });
 
     allErrors.push(...errors);
@@ -281,6 +283,7 @@ handlers['api/bank-sync'] = async function (args) {
     if (simpleFinAccounts.length >= 1) {
       const res = await handlers['simplefin-batch-sync']({
         ids: simpleFinAccountIds,
+        fileId: cloudFileId,
       });
 
       res.forEach(a => allErrors.push(...a.res.errors));
@@ -288,6 +291,7 @@ handlers['api/bank-sync'] = async function (args) {
 
     const { errors } = await handlers['accounts-bank-sync']({
       ids: accountIdsToSync.filter(a => !simpleFinAccountIds.includes(a)),
+      fileId: cloudFileId,
     });
 
     allErrors.push(...errors);

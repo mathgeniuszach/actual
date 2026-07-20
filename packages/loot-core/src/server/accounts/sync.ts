@@ -134,11 +134,20 @@ async function downloadGoCardlessTransactions(
   bankId,
   since,
   includeBalance = true,
+  fileId?: string,
 ) {
   const userToken = await asyncStorage.getItem('user-token');
   if (!userToken) return;
 
   logger.log('Pulling transactions from GoCardless');
+
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
 
   const res = await post(
     getServer().GOCARDLESS_SERVER + '/transactions',
@@ -150,9 +159,7 @@ async function downloadGoCardlessTransactions(
       startDate: since,
       includeBalance,
     },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
+    headers,
   );
 
   if (res.error_code) {
@@ -285,11 +292,20 @@ async function downloadSimpleFinTransactions(
 async function downloadPluggyAiTransactions(
   acctId: AccountEntity['id'],
   since: string,
+  fileId?: string,
 ) {
   const userToken = await asyncStorage.getItem('user-token');
   if (!userToken) return;
 
   logger.log('Pulling transactions from Pluggy.ai');
+
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
 
   const res = await post(
     getServer().PLUGGYAI_SERVER + '/transactions',
@@ -297,9 +313,7 @@ async function downloadPluggyAiTransactions(
       accountId: acctId,
       startDate: since,
     },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
+    headers,
     60000,
   );
 
@@ -324,11 +338,20 @@ async function downloadPluggyAiTransactions(
 async function downloadAkahuTransactions(
   acctId: AccountEntity['id'],
   since: string,
+  fileId?: string,
 ) {
   const userToken = await asyncStorage.getItem('user-token');
   if (!userToken) return;
 
   logger.log('Pulling transactions from Akahu');
+
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
 
   const res = await post(
     getServer().AKAHU_SERVER + '/transactions',
@@ -336,9 +359,7 @@ async function downloadAkahuTransactions(
       accountId: acctId,
       startDate: since,
     },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
+    headers,
     60000,
   );
 
@@ -363,11 +384,20 @@ async function downloadAkahuTransactions(
 async function downloadEnableBankingTransactions(
   acctId: string,
   since: string,
+  fileId?: string,
 ) {
   const userToken = await asyncStorage.getItem('user-token');
   if (!userToken) return;
 
   logger.log('Pulling transactions from Enable Banking');
+
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
 
   const res = await post(
     getServer().ENABLEBANKING_SERVER + '/transactions',
@@ -375,9 +405,7 @@ async function downloadEnableBankingTransactions(
       accountId: acctId,
       startDate: since,
     },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
+    headers,
     60000,
   );
 
@@ -1178,6 +1206,7 @@ export async function syncAccount(
   bankId: string,
   customStartingDate?: string,
   customStartingBalance?: number,
+  fileId?: string,
 ) {
   const acctRow = await db.select('accounts', id);
 
@@ -1188,11 +1217,19 @@ export async function syncAccount(
 
   let download;
   if (acctRow.account_sync_source === 'simpleFin') {
-    download = await downloadSimpleFinTransactions(acctId, syncStartDate);
+    download = await downloadSimpleFinTransactions(
+      acctId,
+      syncStartDate,
+      fileId,
+    );
   } else if (acctRow.account_sync_source === 'pluggyai') {
-    download = await downloadPluggyAiTransactions(acctId, syncStartDate);
+    download = await downloadPluggyAiTransactions(
+      acctId,
+      syncStartDate,
+      fileId,
+    );
   } else if (acctRow.account_sync_source === 'akahu') {
-    download = await downloadAkahuTransactions(acctId, syncStartDate);
+    download = await downloadAkahuTransactions(acctId, syncStartDate, fileId);
   } else if (acctRow.account_sync_source === 'goCardless') {
     download = await downloadGoCardlessTransactions(
       userId,
@@ -1201,9 +1238,14 @@ export async function syncAccount(
       bankId,
       syncStartDate,
       newAccount,
+      fileId,
     );
   } else if (acctRow.account_sync_source === 'enableBanking') {
-    download = await downloadEnableBankingTransactions(acctId, syncStartDate);
+    download = await downloadEnableBankingTransactions(
+      acctId,
+      syncStartDate,
+      fileId,
+    );
   } else {
     throw new Error(
       `Unrecognized bank-sync provider: ${acctRow.account_sync_source}`,
