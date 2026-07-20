@@ -1092,7 +1092,13 @@ async function akahuAccounts({ fileId }: { fileId?: string }) {
   }
 }
 
-async function enableBankingAspsps(country: string) {
+async function enableBankingAspsps({
+  country,
+  fileId,
+}: {
+  country: string;
+  fileId?: string;
+}) {
   const userToken = await asyncStorage.getItem('user-token');
 
   if (!userToken) {
@@ -1104,12 +1110,18 @@ async function enableBankingAspsps(country: string) {
     throw new Error('Failed to get server config.');
   }
 
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
+
   return post(
     serverConfig.ENABLEBANKING_SERVER + '/aspsps',
     { country },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
+    headers,
   );
 }
 
@@ -1119,12 +1131,14 @@ async function enableBankingStartAuth({
   redirectUrl,
   maxConsentValidity,
   psuType = 'personal',
+  fileId,
 }: {
   aspspId: string;
   country: string;
   redirectUrl: string;
   maxConsentValidity?: number;
   psuType?: 'personal' | 'business';
+  fileId?: string;
 }) {
   const userToken = await asyncStorage.getItem('user-token');
 
@@ -1147,6 +1161,14 @@ async function enableBankingStartAuth({
     throw new Error('Failed to get server config.');
   }
 
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
+
   return post(
     serverConfig.ENABLEBANKING_SERVER + '/start-auth',
     {
@@ -1155,18 +1177,18 @@ async function enableBankingStartAuth({
       maxConsentValidity,
       psuType,
     },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
+    headers,
   );
 }
 
 async function enableBankingCompleteAuth({
   code,
   state,
+  fileId,
 }: {
   code: string;
   state: string;
+  fileId?: string;
 }) {
   if (!state) {
     return { error: 'missing-state' };
@@ -1183,12 +1205,18 @@ async function enableBankingCompleteAuth({
     throw new Error('Failed to get server config.');
   }
 
+  const headers: Record<string, string> = {
+    'X-ACTUAL-TOKEN': userToken,
+  };
+
+  if (fileId) {
+    headers['X-Actual-File-Id'] = fileId;
+  }
+
   return post(
     serverConfig.ENABLEBANKING_SERVER + '/complete-auth',
     { code, state },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-    },
+    headers,
   );
 }
 

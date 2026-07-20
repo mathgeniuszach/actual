@@ -16,6 +16,7 @@ import { authorizeBank as authorizeEnableBanking } from '#enablebanking';
 import { authorizeBank as authorizeGoCardless } from '#gocardless';
 import { useAccounts } from '#hooks/useAccounts';
 import { useFailedAccounts } from '#hooks/useFailedAccounts';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import { useDispatch } from '#redux';
 
 function useErrorMessage() {
@@ -99,6 +100,7 @@ export function AccountSyncCheck() {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef(null);
   const { getErrorMessage } = useErrorMessage();
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   const reauth = useCallback(
     (acc: AccountEntity) => {
@@ -106,13 +108,13 @@ export function AccountSyncCheck() {
 
       if (acc.account_id) {
         if (acc.account_sync_source === 'enableBanking') {
-          void authorizeEnableBanking(dispatch);
+          void authorizeEnableBanking(dispatch, undefined, cloudFileId);
         } else if (acc.account_sync_source === 'goCardless') {
-          void authorizeGoCardless(dispatch);
+          void authorizeGoCardless(dispatch, undefined, cloudFileId);
         }
       }
     },
-    [dispatch],
+    [dispatch, cloudFileId],
   );
 
   const unlinkAccount = useUnlinkAccountMutation();

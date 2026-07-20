@@ -48,6 +48,7 @@ function extractPsuHeaders(req: Request): PsuHeaders {
 async function buildSessionResult(
   session: EnableBankingSession,
   psuHeaders?: PsuHeaders,
+  fileId?: string,
 ) {
   const accountsWithBalances = await Promise.all(
     session.accounts.map(async account => {
@@ -58,6 +59,7 @@ async function buildSessionResult(
         const balanceResult = await enableBankingService.getBalances(
           account.uid,
           psuHeaders,
+          fileId,
         );
         balances = balanceResult.balances.map(normalizeBalance);
       } catch (err) {
@@ -108,14 +110,20 @@ app.get('/auth_callback', async (req: Request, res: Response) => {
   }
 
   try {
-    const session = await enableBankingService.createSession(code);
+    const fileId = authStateFileIds.get(state);
+    authStateFileIds.delete(state);
+    const session = await enableBankingService.createSession(code, fileId);
     debug(
       'Callback session created: %s with %d accounts',
       session.session_id,
       session.accounts.length,
     );
 
-    const result = await buildSessionResult(session, extractPsuHeaders(req));
+    const result = await buildSessionResult(
+      session,
+      extractPsuHeaders(req),
+      fileId,
+    );
 
     // Always cache the result so retries within TTL can read it
     completedAuths.set(state, result);
@@ -170,6 +178,10 @@ type PendingAuth = {
 // handles both the callback and client poll for a given state.
 const pendingAuths = new Map<string, PendingAuth>();
 const completedAuths = new Map<string, unknown>();
+// Maps an auth `state` to the budget file id so the bank-redirect callback
+// (which cannot carry the X-Actual-File-Id header) can resolve the correct
+// per-file credentials.
+const authStateFileIds = new Map<string, string>();
 let nextWaiterId = 0;
 
 const POLL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -238,7 +250,11 @@ app.post(
     }
 
     // Only persist after successful validation
-    secretsService.set(SecretName.enablebanking_applicationId, applicationId, fileId);
+    secretsService.set(
+      SecretName.enablebanking_applicationId,
+      applicationId,
+      fileId,
+    );
     secretsService.set(SecretName.enablebanking_secretKey, secretKey, fileId);
 
     res.send({
@@ -254,9 +270,10 @@ app.post(
   '/aspsps',
   handleError(async (req: Request, res: Response) => {
     const { country } = req.body || {};
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     try {
-      const aspsps = await enableBankingService.getAspsps(country);
+      const aspsps = await enableBankingService.getAspsps(country, fileId);
 
       res.send({
         status: 'ok',
@@ -277,6 +294,7 @@ app.post(
   '/start-auth',
   handleError(async (req: Request, res: Response) => {
     const { aspsp, redirectUrl, maxConsentValidity, psuType } = req.body || {};
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     if (!aspsp || !redirectUrl) {
       res.send({
@@ -291,6 +309,13 @@ app.post(
 
     const state = uuidv4();
 
+    // Remember which budget file initiated this auth so the bank-redirect
+    // callback can look up the matching per-file credentials by state.
+    if (fileId) {
+      authStateFileIds.set(state, fileId);
+      setTimeout(() => authStateFileIds.delete(state), POLL_TIMEOUT_MS);
+    }
+
     try {
       const authResponse = await enableBankingService.startAuth(
         aspsp,
@@ -298,6 +323,7 @@ app.post(
         state,
         typeof maxConsentValidity === 'number' ? maxConsentValidity : undefined,
         psuType === 'business' ? 'business' : 'personal',
+        fileId,
       );
 
       res.send({
@@ -322,6 +348,7 @@ app.post(
   '/complete-auth',
   handleError(async (req: Request, res: Response) => {
     const { code, state } = req.body || {};
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     if (!code) {
       res.send({
@@ -335,14 +362,18 @@ app.post(
     }
 
     try {
-      const session = await enableBankingService.createSession(code);
+      const session = await enableBankingService.createSession(code, fileId);
       debug(
         'Session created: %s with %d accounts',
         session.session_id,
         session.accounts.length,
       );
 
-      const result = await buildSessionResult(session, extractPsuHeaders(req));
+      const result = await buildSessionResult(
+        session,
+        extractPsuHeaders(req),
+        fileId,
+      );
 
       // Always cache so retries within TTL can read the result
       if (state) {
@@ -481,6 +512,7 @@ app.post(
   '/transactions',
   handleError(async (req: Request, res: Response) => {
     const { accountId, startDate } = req.body || {};
+    const fileId = req.headers['x-actual-file-id'] as string | undefined;
 
     if (!accountId || !startDate) {
       res.send({
@@ -506,6 +538,7 @@ app.post(
       const balanceResult = await enableBankingService.getBalances(
         accountId,
         psuHeaders,
+        fileId,
       );
       const balances = balanceResult.balances.map(normalizeBalance);
 
@@ -523,6 +556,7 @@ app.post(
         dateFrom,
         dateTo,
         psuHeaders,
+        fileId,
       );
 
       const all: ReturnType<typeof normalizeTransaction>[] = [];

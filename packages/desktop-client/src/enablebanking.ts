@@ -13,11 +13,13 @@ function _authorize(
   {
     onSuccess,
     onClose,
+    fileId,
   }: {
     onSuccess: (data: {
       accounts: SyncServerEnableBankingAccount[];
     }) => Promise<void>;
     onClose?: () => void;
+    fileId?: string;
   },
 ) {
   dispatch(
@@ -39,6 +41,7 @@ function _authorize(
               redirectUrl,
               maxConsentValidity,
               psuType,
+              fileId,
             });
 
             if (resp.error) {
@@ -68,6 +71,14 @@ function _authorize(
             }
 
             localStorage.setItem('enablebanking_auth_state', state);
+            // The bank redirect opens a fresh window whose backend has no
+            // budget loaded, so it can't infer the file id from prefs. Stash
+            // it here so the callback can forward it to complete-auth.
+            if (fileId) {
+              localStorage.setItem('enablebanking_auth_file_id', fileId);
+            } else {
+              localStorage.removeItem('enablebanking_auth_file_id');
+            }
             onStateReady?.(state);
             window.open(
               authUrl,
@@ -115,6 +126,7 @@ function _authorize(
               // a concurrent retry may have overwritten it with a newer one.
               if (localStorage.getItem('enablebanking_auth_state') === state) {
                 localStorage.removeItem('enablebanking_auth_state');
+                localStorage.removeItem('enablebanking_auth_file_id');
               }
             }
           },
@@ -129,8 +141,10 @@ function _authorize(
 export async function authorizeBank(
   dispatch: AppDispatch,
   upgradingAccountId?: AccountEntity['id'],
+  fileId?: string,
 ) {
   _authorize(dispatch, {
+    fileId,
     onSuccess: async data => {
       dispatch(
         pushModal({

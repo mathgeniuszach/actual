@@ -444,7 +444,7 @@ export function useBuiltInBankSyncProviders({
     }
 
     try {
-      await authorizeEnableBanking(dispatch, upgradingAccountId);
+      await authorizeEnableBanking(dispatch, upgradingAccountId, cloudFileId);
     } catch (error) {
       dispatch(
         addNotification({
@@ -464,6 +464,7 @@ export function useBuiltInBankSyncProviders({
     onEnableBankingInit,
     t,
     upgradingAccountId,
+    cloudFileId,
   ]);
 
   const onConnectPluggyAi = useCallback(async () => {

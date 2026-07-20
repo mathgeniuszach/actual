@@ -47,6 +47,7 @@ export function EnableBankingCallback() {
 
       if (!stateValid) {
         localStorage.removeItem('enablebanking_auth_state');
+        localStorage.removeItem('enablebanking_auth_file_id');
         setStatus('error');
         setErrorMessage(t('Authorization state mismatch. Please try again.'));
         return;
@@ -56,6 +57,8 @@ export function EnableBankingCallback() {
         const result = await send('enablebanking-complete-auth', {
           code,
           state: stateParam,
+          fileId:
+            localStorage.getItem('enablebanking_auth_file_id') ?? undefined,
         });
 
         if (result.error) {
@@ -68,6 +71,7 @@ export function EnableBankingCallback() {
 
         setStatus('success');
         localStorage.removeItem('enablebanking_auth_state');
+        localStorage.removeItem('enablebanking_auth_file_id');
 
         // Auto-close after a short delay
         setTimeout(() => {

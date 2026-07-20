@@ -21,6 +21,7 @@ import { COUNTRY_OPTIONS } from '#components/util/countries';
 import { getCountryFromBrowser } from '#components/util/localeToCountry';
 import { useEnableBankingStatus } from '#hooks/useEnableBankingStatus';
 import { useGlobalPref } from '#hooks/useGlobalPref';
+import { useMetadataPref } from '#hooks/useMetadataPref';
 import { pushModal } from '#modals/modalsSlice';
 import type { Modal as ModalType } from '#modals/modalsSlice';
 import { useDispatch } from '#redux';
@@ -33,6 +34,7 @@ type BankOption = {
 
 function useAvailableBanks(
   country: string | undefined,
+  fileId?: string,
   refetchKey?: boolean | null,
 ) {
   const { t } = useTranslation();
@@ -56,10 +58,10 @@ function useAvailableBanks(
 
       setIsLoading(true);
 
-      const { data, error } = await sendCatch(
-        'enablebanking-aspsps',
-        country.toUpperCase(),
-      );
+      const { data, error } = await sendCatch('enablebanking-aspsps', {
+        country: country.toUpperCase(),
+        fileId,
+      });
 
       if (cancelled) return;
 
@@ -84,7 +86,7 @@ function useAvailableBanks(
     return () => {
       cancelled = true;
     };
-  }, [country, refetchKey, t]);
+  }, [country, fileId, refetchKey, t]);
 
   return {
     data: banks,
@@ -123,6 +125,7 @@ export function EnableBankingExternalMsgModal({
 
   const dispatch = useDispatch();
   const [language] = useGlobalPref('language');
+  const [cloudFileId] = useMetadataPref('cloudFileId');
 
   const browserTimezone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || '';
@@ -151,7 +154,7 @@ export function EnableBankingExternalMsgModal({
     data: bankOptions,
     isLoading: isBankOptionsLoading,
     isError: isBankOptionError,
-  } = useAvailableBanks(country, isEnableBankingSetupComplete);
+  } = useAvailableBanks(country, cloudFileId, isEnableBankingSetupComplete);
   const {
     configuredEnableBanking: isConfigured,
     isLoading: isConfigurationLoading,
